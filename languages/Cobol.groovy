@@ -4,6 +4,8 @@ import com.ibm.dbb.dependency.*
 import com.ibm.dbb.build.*
 import groovy.transform.*
 import com.ibm.jzos.ZFile
+import com.ibm.dbb.build.report.*
+import com.ibm.dbb.build.report.records.*
 
 
 // define script properties
@@ -13,6 +15,11 @@ import com.ibm.jzos.ZFile
 @Field def bindUtils= loadScript(new File("${props.zAppBuildDir}/utilities/BindUtilities.groovy"))
 @Field RepositoryClient repositoryClient
 
+@Field def resolverUtils
+// Conditionally load the ResolverUtilities.groovy which require at least DBB 1.1.2
+if (props.useSearchConfiguration && props.useSearchConfiguration.toBoolean() && buildUtils.assertDbbBuildToolkitVersion(props.dbbToolkitVersion, "1.1.2")) {
+	resolverUtils = loadScript(new File("${props.zAppBuildDir}/utilities/ResolverUtilities.groovy"))}
+	
 println("** Building files mapped to ${this.class.getName()}.groovy script")
 
 // verify required build properties
@@ -22,13 +29,13 @@ buildUtils.assertBuildProperties(props.cobol_requiredBuildProperties)
 def langQualifier = "cobol"
 buildUtils.createLanguageDatasets(langQualifier)
 
-if (props.runzTests && props.runzTests.toBoolean()) {
+// sort the build list based on build file rank if provided
+List<String> sortedList = buildUtils.sortBuildList(argMap.buildList, 'cobol_fileBuildRank')
+
+if (buildListContainsTests(sortedList)) {
 	langQualifier = "cobol_test"
 	buildUtils.createLanguageDatasets(langQualifier)
 }
-
-// sort the build list based on build file rank if provided
-List<String> sortedList = buildUtils.sortBuildList(argMap.buildList, 'cobol_fileBuildRank')
 
 // iterate through build list
 sortedList.each { buildFile ->
@@ -37,16 +44,28 @@ sortedList.each { buildFile ->
 	// Check if this a testcase
 	isZUnitTestCase = (props.getFileProperty('cobol_testcase', buildFile).equals('true')) ? true : false
 
+	// configure dependency resolution and create logical file
+	def dependencyResolver
+	LogicalFile logicalFile
+
+	if (props.useSearchConfiguration && props.useSearchConfiguration.toBoolean() && props.cobol_dependencySearch && buildUtils.assertDbbBuildToolkitVersion(props.dbbToolkitVersion, "1.1.2")) { // use new SearchPathDependencyResolver
+		String dependencySearch = props.getFileProperty('cobol_dependencySearch', buildFile)
+		dependencyResolver = resolverUtils.createSearchPathDependencyResolver(dependencySearch)
+		logicalFile = resolverUtils.createLogicalFile(dependencyResolver, buildFile)
+
+	} else { // use deprecated DependencyResolver
+		String rules = props.getFileProperty('cobol_resolutionRules', buildFile)
+		dependencyResolver = buildUtils.createDependencyResolver(buildFile, rules)
+		logicalFile = dependencyResolver.getLogicalFile()
+	}
+	
 	// copy build file and dependency files to data sets
-	String rules = props.getFileProperty('cobol_resolutionRules', buildFile)
-	DependencyResolver dependencyResolver = buildUtils.createDependencyResolver(buildFile, rules)
 	if(isZUnitTestCase){
-		buildUtils.copySourceFiles(buildFile, props.cobol_testcase_srcPDS, null, null)
+		buildUtils.copySourceFiles(buildFile, props.cobol_testcase_srcPDS, null, null, null)
 	}else{
-		buildUtils.copySourceFiles(buildFile, props.cobol_srcPDS, props.cobol_cpyPDS, dependencyResolver)
+		buildUtils.copySourceFiles(buildFile, props.cobol_srcPDS, 'cobol_dependenciesDatasetMapping', props.cobol_dependenciesAlternativeLibraryNameMapping, dependencyResolver)
 	}
 	// create mvs commands
-	LogicalFile logicalFile = dependencyResolver.getLogicalFile()
 	String member = CopyToPDS.createMemberName(buildFile)
 	File logFile = new File( props.userBuild ? "${props.buildOutDir}/${member}.log" : "${props.buildOutDir}/${member}.cobol.log")
 	if (logFile.exists())
@@ -71,8 +90,15 @@ sortedList.each { buildFile ->
 		props.error = "true"
 		buildUtils.updateBuildResult(errorMsg:errorMsg,logs:["${member}.log":logFile],client:getRepositoryClient())
 	}
-	else {
-		// if this program needs to be link edited . . .
+	else { // if this program needs to be link edited . . .
+		
+		// Store db2 bind information as a generic property record in the BuildReport
+		String generateDb2BindInfoRecord = props.getFileProperty('generateDb2BindInfoRecord', buildFile)
+		if (buildUtils.isSQL(logicalFile) && generateDb2BindInfoRecord.toBoolean() ){
+			PropertiesRecord db2BindInfoRecord = buildUtils.generateDb2InfoRecord(buildFile)
+			BuildReportFactory.getBuildReport().addRecord(db2BindInfoRecord)
+		}
+		
 		String needsLinking = props.getFileProperty('cobol_linkEdit', buildFile)
 		if (needsLinking.toBoolean()) {
 			rc = linkEdit.execute()
@@ -201,7 +227,15 @@ def createCompileCommand(String buildFile, LogicalFile logicalFile, String membe
 		compile.dd(new DDStatement().dsn(props.bms_cpyPDS).options("shr"))
 	if(props.team)
 		compile.dd(new DDStatement().dsn(props.cobol_BMS_PDS).options("shr"))
-		
+	
+	// add additional datasets with dependencies based on the dependenciesDatasetMapping
+	PropertyMappings dsMapping = new PropertyMappings('cobol_dependenciesDatasetMapping')
+	dsMapping.getValues().each { targetDataset ->
+		// exclude the defaults cobol_cpyPDS and any overwrite in the alternativeLibraryNameMap
+		if (targetDataset != 'cobol_cpyPDS')
+			compile.dd(new DDStatement().dsn(props.getProperty(targetDataset)).options("shr"))
+	}
+
 	// add custom concatenation
 	def compileSyslibConcatenation = props.getFileProperty('cobol_compileSyslibConcatenation', buildFile) ?: ""
 	if (compileSyslibConcatenation) {
@@ -219,6 +253,23 @@ def createCompileCommand(String buildFile, LogicalFile logicalFile, String membe
 	if (isZUnitTestCase)
 	compile.dd(new DDStatement().dsn(props.SBZUSAMP).options("shr"))
 
+	// adding alternate library definitions
+	if (props.cobol_dependenciesAlternativeLibraryNameMapping) {
+		alternateLibraryNameAllocations = buildUtils.parseJSONStringToMap(props.cobol_dependenciesAlternativeLibraryNameMapping)
+		alternateLibraryNameAllocations.each { libraryName, datasetDefinition ->
+			datasetName = props.getProperty(datasetDefinition)
+			if (datasetName) {
+				compile.dd(new DDStatement().name(libraryName).dsn(datasetName).options("shr"))
+			}
+			else {
+				String errorMsg = "*! Cobol.groovy. The dataset definition $datasetDefinition could not be resolved from the DBB Build properties."
+				println(errorMsg)
+				props.error = "true"
+				buildUtils.updateBuildResult(errorMsg:errorMsg,client:getRepositoryClient())
+			}
+		}
+	}
+	
 	// add a tasklib to the compile command with optional CICS, DB2, and IDz concatenations
 	String compilerVer = props.getFileProperty('cobol_compilerVersion', buildFile)
 	compile.dd(new DDStatement().name("TASKLIB").dsn(props."SIGYCOMP_$compilerVer").options("shr"))
@@ -257,6 +308,13 @@ def createLinkEditCommand(String buildFile, LogicalFile logicalFile, String memb
 	String linkEditStream = props.getFileProperty('cobol_linkEditStream', buildFile)
 	String linkDebugExit = props.getFileProperty('cobol_linkDebugExit', buildFile)
 
+	// obtain githash for buildfile
+	String cobol_storeSSI = props.getFileProperty('cobol_storeSSI', buildFile)
+	if (cobol_storeSSI && cobol_storeSSI.toBoolean() && (props.mergeBuild || props.impactBuild || props.fullBuild)) {
+		String ssi = buildUtils.getShortGitHash(buildFile)
+		if (ssi != null) parms = parms + ",SSI=$ssi"
+	}
+	
 	// define the MVSExec command to link edit the program
 	MVSExec linkedit = new MVSExec().file(buildFile).pgm(linker).parm(parms)
 
@@ -286,14 +344,12 @@ def createLinkEditCommand(String buildFile, LogicalFile logicalFile, String memb
 	}
 
 	// add DD statements to the linkedit command
-	String linkedit_deployType = props.getFileProperty('linkedit_deployType', buildFile)
-	if ( linkedit_deployType == null )
-		linkedit_deployType = 'LOAD'
+	String deployType = buildUtils.getDeployType("cobol", buildFile, logicalFile)
 	if(isZUnitTestCase){
 		linkedit.dd(new DDStatement().name("SYSLMOD").dsn("${props.cobol_testcase_loadPDS}($member)").options('shr').output(true).deployType('ZUNIT-TESTCASE'))
 	}
 	else {
-		linkedit.dd(new DDStatement().name("SYSLMOD").dsn("${props.cobol_loadPDS}($member)").options('shr').output(true).deployType(linkedit_deployType))
+		linkedit.dd(new DDStatement().name("SYSLMOD").dsn("${props.cobol_loadPDS}($member)").options('shr').output(true).deployType(deployType))
 	}
 	linkedit.dd(new DDStatement().name("SYSPRINT").options(props.cobol_printTempOptions))
 	linkedit.dd(new DDStatement().name("SYSUT1").options(props.cobol_tempOptions))
@@ -341,4 +397,9 @@ def getRepositoryClient() {
 		repositoryClient = new RepositoryClient().forceSSLTrusted(true)
 
 	return repositoryClient
+}
+
+boolean buildListContainsTests(List<String> buildList) {
+	boolean containsZUnitTestCase = buildList.find { buildFile -> props.getFileProperty('cobol_testcase', buildFile).equals('true')}
+	return containsZUnitTestCase ? true : false
 }
