@@ -1,22 +1,22 @@
        PROCESS NODLL,NODYNAM,TEST(NOSEP),NOCICS,NOSQL,PGMN(LU)
       *+---------------------------------------------------------------+
-      *| TCBSRGDB                                                      |
+      *| TCBSCSRG                                                      |
       *| PRODUCT: IBM DEVELOPER FOR Z/OS                               |
       *| COMPONENT: IBM Z/OS AUTOMATED UNIT TESTING FRAMEWORK (ZUNIT)  |
       *|   FOR ENTERPRISE COBOL AND PL/I                               |
       *| PROGRAM: ENTERPRISE COBOL ZUNIT TEST CASE FOR DYNAMIC RUNNER  |
-      *| DATE GENERATED: 09/06/2021 10:24                              |
-      *| ID: 9be407fb-a469-42fd-a765-53d90da32a38                      |
+      *| DATE GENERATED: 06/28/2022 00:09                              |
+      *| ID: 438bd47d-5243-4c2e-b790-5b0697a791f3                      |
       *+---------------------------------------------------------------+
       *+---------------------------------------------------------------+
-      *| TEST_TEST2                                                    |
-      *|     THIS PROGRAM IS FOR TEST TEST2                            |
+      *| TEST_TEST1                                                    |
+      *|     THIS PROGRAM IS FOR TEST TEST1                            |
       *+---------------------------------------------------------------+
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. 'TEST_TEST2'.
+       PROGRAM-ID. 'TEST_TEST1'.
        DATA DIVISION.
        WORKING-STORAGE SECTION.
-       01 PROGRAM-NAME   PIC X(8)  VALUE 'CBSRGDBB'.
+       01 PROGRAM-NAME   PIC X(8)  VALUE 'CBSCSRG'.
        01 BZ-ASSERT.
          03 MESSAGE-LEN PIC S9(4) COMP-4 VALUE 24.
          03 MESSAGE-TXT PIC X(254) VALUE 'HELLO FROM TEST CALLBACK'.
@@ -33,82 +33,12 @@
          03 ASSERT-RC PIC 9(9) BINARY VALUE 4.
          03 ASSERT-TEXT PIC 9(4) BINARY VALUE 0.
        01 AZ-TEST-NAME-LEN       PIC S9(9) COMP-5.
-       1 AZ-TEST-EXPECTED-DATA-VALUE.
-          3 ZUT00000000.
-            5 PIC X(6) DISPLAY VALUE 'OLIVIA'.
-            5 PIC X(44) DISPLAY VALUE SPACES.
-          3 ZUT00000001.
-            5 PIC X(10) DISPLAY VALUE '2021-09-06'.
-          3 ZUT00000002.
-            5 PIC X(8) DISPLAY VALUE '10.21.42'.
-          3 ZUT00000003.
-            5 PIC X(10) VALUE X'D6D3C9E5C9C140D9C5C7'.
-            5 PIC X(10) VALUE X'C9E2E3C5D9C5C440E2E4'.
-            5 PIC X(10) VALUE X'C3C3C5E2E2C6E4D3D3E8'.
-            5 PIC X(10) VALUE X'00000000000000000000'.
-            5 PIC X(10) VALUE X'00000000000000000000'.
-            5 PIC X(10) VALUE X'00000000000000000000'.
-            5 PIC X(10) VALUE X'00000000000000000000'.
-            5 PIC X(10) VALUE X'00000000000000000000'.
-            5 PIC X(10) VALUE X'00000000000000000000'.
-            5 PIC X(10) VALUE X'00000000000000000000'.
-       01 AZ-COMPARE.
-         03 AZ-COMPARE-ITEM-NAME-PTR  POINTER.
-         03 AZ-COMPARE-ITEM-NAME-LEN  PIC S9(9) COMP-5.
-         03 AZ-COMPARE-ITEM-VALUE-PTR POINTER.
-         03 AZ-COMPARE-ITEM-VALUE-LEN PIC S9(9) COMP-5.
-         03 AZ-COMPARE-ITEM-EXP-VALUE-PTR POINTER.
-         03 AZ-COMPARE-ITEM-EXP-VALUE-LEN PIC S9(9) COMP-5.
        LOCAL-STORAGE SECTION.
-       1 AZ-COMPARE-ITEM-NAMES.
-         3 ZUT00000004.
-            5 PIC X(20) DISPLAY VALUE 'CUSTOMER-NAME OF CSR'.
-            5 PIC X(20) DISPLAY VALUE 'GRES OF CSRGRES OF D'.
-            5 PIC X(10) DISPLAY VALUE 'FHCOMMAREA'.
-         3 ZUT00000006.
-            5 PIC X(20) DISPLAY VALUE 'CUSTOMER-ID OF CSRGR'.
-            5 PIC X(20) DISPLAY VALUE 'ES OF CSRGRES OF DFH'.
-            5 PIC X(8) DISPLAY VALUE 'COMMAREA'.
-         3 ZUT00000008.
-            5 PIC X(20) DISPLAY VALUE 'SYS-DATE OF CSRGRES '.
-            5 PIC X(20) DISPLAY VALUE 'OF CSRGRES OF DFHCOM'.
-            5 PIC X(5) DISPLAY VALUE 'MAREA'.
-         3 ZUT0000000A.
-            5 PIC X(20) DISPLAY VALUE 'SYS-TIME OF CSRGRES '.
-            5 PIC X(20) DISPLAY VALUE 'OF CSRGRES OF DFHCOM'.
-            5 PIC X(5) DISPLAY VALUE 'MAREA'.
-         3 ZUT0000000C.
-            5 PIC X(20) DISPLAY VALUE 'MESSAGES OF CSRGRES '.
-            5 PIC X(20) DISPLAY VALUE 'OF CSRGRES OF DFHCOM'.
-            5 PIC X(5) DISPLAY VALUE 'MAREA'.
-       1 AZ-COMPARE-WORK-ITEMS.
-          3 ZUT00000005 PIC X(50) OCCURS 2.
-          3 ZUT00000007 PIC -9(9) OCCURS 2.
-          3 ZUT00000009 PIC X(10) OCCURS 2.
-          3 ZUT0000000B PIC X(8) OCCURS 2.
-          3 ZUT0000000D PIC X(200) OCCURS 2.
-       01 AZ-CONVERT.
-         03 AZ-CONVERT-HEXIN  PIC X(1).
-         03 AZ-CONVERT-HEXVAL PIC X(2).
-         03 AZ-HEXSTR PIC X(16) VALUE "0123456789ABCDEF".
-         03 AZ-DEC  PIC S9(4) COMP VALUE 0.
-         03 FILLER REDEFINES AZ-DEC.
-           05 FILLER PIC X.
-           05 AZ-DECBYTE PIC X.
-         03 AZ-I PIC S9(8) COMP.
-         03 AZ-J PIC S9(8) COMP.
-         03 AZ-Q PIC S9(8) COMP.
-         03 AZ-R PIC S9(8) COMP.
-         03 AZ-Q1 PIC S9(8) COMP.
-         03 AZ-R1 PIC S9(8) COMP.
        LINKAGE SECTION.
        01 AZ-TEST                   PIC X(80).
        01 AZ-ARG-LIST.
          03 ARG-LENGTH PIC 9(4) COMP-4.
          03 ARG-DATA PIC X(256).
-       01 AZ-COMPARE-ITEM-NAME      PIC X(254).
-       01 AZ-COMPARE-ITEM-VALUE     PIC X(254).
-       01 AZ-COMPARE-ITEM-EXP-VALUE PIC X(254).
        1 DFHEIBLK.
          2 EIBTIME PICTURE S9(7) USAGE COMPUTATIONAL-3.
          2 EIBDATE PICTURE S9(7) USAGE COMPUTATIONAL-3.
@@ -152,12 +82,10 @@
          5 SYS-DATE PIC X(10).
          5 SYS-TIME PIC X(08).
          5 MESSAGES PIC X(100).
-          5 MESSAGES-AZ REDEFINES MESSAGES.
-          6 PIC X(100) DISPLAY.
        PROCEDURE DIVISION USING AZ-TEST
            DFHEIBLK DFHCOMMAREA.
       * START
-           DISPLAY 'TEST_TEST2 STARTED...'
+           DISPLAY 'TEST_TEST1 STARTED...'
            MOVE 0 TO AZ-TEST-NAME-LEN.
            INSPECT AZ-TEST TALLYING AZ-TEST-NAME-LEN FOR
            CHARACTERS BEFORE INITIAL SPACE.
@@ -166,173 +94,21 @@
       * SET AREA ADDRESS TO POINTER
       * SET INPUT VALUE
            MOVE 0 TO RETURN-CODE.
+           MOVE 100000001001 TO ACCOUNT-NO OF CSRGREQ OF CSRGREQ OF
+           DFHCOMMAREA
       * CALL TEST PROGRAM
-           DISPLAY 'CALL CBSRGDBB'
+           DISPLAY 'CALL CBSCSRG'
            CALL PROGRAM-NAME
            USING DFHEIBLK DFHCOMMAREA
            .
       * EVALUATE OUTPUT VALUE
            MOVE 0 TO RETURN-CODE
-           IF CUSTOMER-NAME OF CSRGRES OF CSRGRES OF DFHCOMMAREA =
-           ZUT00000000 THEN
-             CONTINUE
-           ELSE
-             MOVE CUSTOMER-NAME OF CSRGRES OF CSRGRES OF DFHCOMMAREA
-           TO ZUT00000005(1)
-             MOVE ZUT00000000 TO ZUT00000005(2)
-             SET AZ-COMPARE-ITEM-NAME-PTR TO ADDRESS OF ZUT00000004
-             MOVE LENGTH OF ZUT00000004 TO AZ-COMPARE-ITEM-NAME-LEN
-             SET AZ-COMPARE-ITEM-VALUE-PTR TO ADDRESS OF ZUT00000005(1)
-             MOVE 50 TO AZ-COMPARE-ITEM-VALUE-LEN
-             SET AZ-COMPARE-ITEM-EXP-VALUE-PTR TO ADDRESS OF
-           ZUT00000005(2)
-             MOVE 50 TO AZ-COMPARE-ITEM-EXP-VALUE-LEN
-             PERFORM THROW-ASSERTION
-           END-IF
-           IF (CUSTOMER-ID OF CSRGRES OF CSRGRES OF DFHCOMMAREA IS
-           NUMERIC)
-               AND (CUSTOMER-ID OF CSRGRES OF CSRGRES OF DFHCOMMAREA =
-           78100) THEN
-             CONTINUE
-           ELSE
-             MOVE CUSTOMER-ID OF CSRGRES OF CSRGRES OF DFHCOMMAREA TO
-           ZUT00000007(1)
-             MOVE 78100 TO ZUT00000007(2)
-             SET AZ-COMPARE-ITEM-NAME-PTR TO ADDRESS OF ZUT00000006
-             MOVE LENGTH OF ZUT00000006 TO AZ-COMPARE-ITEM-NAME-LEN
-             SET AZ-COMPARE-ITEM-VALUE-PTR TO ADDRESS OF ZUT00000007(1)
-             MOVE 10 TO AZ-COMPARE-ITEM-VALUE-LEN
-             SET AZ-COMPARE-ITEM-EXP-VALUE-PTR TO ADDRESS OF
-           ZUT00000007(2)
-             MOVE 10 TO AZ-COMPARE-ITEM-EXP-VALUE-LEN
-             PERFORM THROW-ASSERTION
-           END-IF
-           IF SYS-DATE OF CSRGRES OF CSRGRES OF DFHCOMMAREA =
-           ZUT00000001 THEN
-             CONTINUE
-           ELSE
-             MOVE SYS-DATE OF CSRGRES OF CSRGRES OF DFHCOMMAREA TO
-           ZUT00000009(1)
-             MOVE ZUT00000001 TO ZUT00000009(2)
-             SET AZ-COMPARE-ITEM-NAME-PTR TO ADDRESS OF ZUT00000008
-             MOVE LENGTH OF ZUT00000008 TO AZ-COMPARE-ITEM-NAME-LEN
-             SET AZ-COMPARE-ITEM-VALUE-PTR TO ADDRESS OF ZUT00000009(1)
-             MOVE 10 TO AZ-COMPARE-ITEM-VALUE-LEN
-             SET AZ-COMPARE-ITEM-EXP-VALUE-PTR TO ADDRESS OF
-           ZUT00000009(2)
-             MOVE 10 TO AZ-COMPARE-ITEM-EXP-VALUE-LEN
-             PERFORM THROW-ASSERTION
-           END-IF
-           IF SYS-TIME OF CSRGRES OF CSRGRES OF DFHCOMMAREA =
-           ZUT00000002 THEN
-             CONTINUE
-           ELSE
-             MOVE SYS-TIME OF CSRGRES OF CSRGRES OF DFHCOMMAREA TO
-           ZUT0000000B(1)
-             MOVE ZUT00000002 TO ZUT0000000B(2)
-             SET AZ-COMPARE-ITEM-NAME-PTR TO ADDRESS OF ZUT0000000A
-             MOVE LENGTH OF ZUT0000000A TO AZ-COMPARE-ITEM-NAME-LEN
-             SET AZ-COMPARE-ITEM-VALUE-PTR TO ADDRESS OF ZUT0000000B(1)
-             MOVE 8 TO AZ-COMPARE-ITEM-VALUE-LEN
-             SET AZ-COMPARE-ITEM-EXP-VALUE-PTR TO ADDRESS OF
-           ZUT0000000B(2)
-             MOVE 8 TO AZ-COMPARE-ITEM-EXP-VALUE-LEN
-             PERFORM THROW-ASSERTION
-           END-IF
-           IF MESSAGES-AZ OF CSRGRES OF CSRGRES OF DFHCOMMAREA =
-           ZUT00000003 THEN
-             CONTINUE
-           ELSE
-             PERFORM VARYING AZ-I FROM 1 BY 1 UNTIL AZ-I > 100
-               MOVE MESSAGES-AZ OF CSRGRES OF CSRGRES OF
-           DFHCOMMAREA(AZ-I:1) TO AZ-CONVERT-HEXIN
-               PERFORM CONVERT
-               COMPUTE AZ-J = AZ-I * 2 - 1
-               MOVE AZ-CONVERT-HEXVAL TO ZUT0000000D(1)(AZ-J:2)
-             END-PERFORM
-             PERFORM VARYING AZ-I FROM 1 BY 1 UNTIL AZ-I > 100
-               MOVE ZUT00000003(AZ-I:1) TO AZ-CONVERT-HEXIN
-               PERFORM CONVERT
-               COMPUTE AZ-J = AZ-I * 2 - 1
-               MOVE AZ-CONVERT-HEXVAL TO ZUT0000000D(2)(AZ-J:2)
-             END-PERFORM
-             SET AZ-COMPARE-ITEM-NAME-PTR TO ADDRESS OF ZUT0000000C
-             MOVE LENGTH OF ZUT0000000C TO AZ-COMPARE-ITEM-NAME-LEN
-             SET AZ-COMPARE-ITEM-VALUE-PTR TO ADDRESS OF ZUT0000000D(1)
-             MOVE 200 TO AZ-COMPARE-ITEM-VALUE-LEN
-             SET AZ-COMPARE-ITEM-EXP-VALUE-PTR TO ADDRESS OF
-           ZUT0000000D(2)
-             MOVE 200 TO AZ-COMPARE-ITEM-EXP-VALUE-LEN
-             PERFORM THROW-ASSERTION
-           END-IF
       * END
-           DISPLAY 'TEST_TEST2 SUCCESSFUL.'
+           DISPLAY 'TEST_TEST1 SUCCESSFUL.'
            GOBACK.
        INITIALIZE-PARM.
            EXIT.
-       CONVERT.
-           MOVE AZ-CONVERT-HEXIN TO AZ-DECBYTE
-           DIVIDE AZ-DEC BY 16 GIVING AZ-Q REMAINDER AZ-R
-           COMPUTE AZ-Q1 = AZ-Q + 1
-           COMPUTE AZ-R1 = AZ-R + 1
-           MOVE AZ-HEXSTR(AZ-Q1:1) TO AZ-CONVERT-HEXVAL(1:1)
-           MOVE AZ-HEXSTR(AZ-R1:1) TO AZ-CONVERT-HEXVAL(2:1)
-           EXIT.
-       THROW-ASSERTION.
-           MOVE 1 TO MESSAGE-LEN OF BZ-ASSERT
-           STRING 'COMPARE FAILED IN PROCEDURE DIVISION.'
-             DELIMITED BY SIZE INTO MESSAGE-TXT OF BZ-ASSERT
-             WITH POINTER MESSAGE-LEN OF BZ-ASSERT
-           END-STRING
-           SUBTRACT 1 FROM MESSAGE-LEN OF BZ-ASSERT
-           SET ADDRESS OF AZ-COMPARE-ITEM-NAME TO
-           AZ-COMPARE-ITEM-NAME-PTR.
-           SET ADDRESS OF AZ-COMPARE-ITEM-VALUE TO
-           AZ-COMPARE-ITEM-VALUE-PTR.
-           SET ADDRESS OF AZ-COMPARE-ITEM-EXP-VALUE TO
-           AZ-COMPARE-ITEM-EXP-VALUE-PTR.
-           DISPLAY '****************************************************
-      -    '****************************'
-           DISPLAY 'AZU2001W THE TEST "' AZ-TEST(1:AZ-TEST-NAME-LEN) '"
-      -    'FAILED DUE TO AN ASSERTION.'
-           DISPLAY 'AZU1101I ' MESSAGE-TXT OF BZ-ASSERT(1:MESSAGE-LEN
-           OF BZ-ASSERT)
-           DISPLAY ' DATA ITEM NAME : '
-           AZ-COMPARE-ITEM-NAME(1:AZ-COMPARE-ITEM-NAME-LEN)
-           DISPLAY '  VALUE         : '
-           AZ-COMPARE-ITEM-VALUE(1:AZ-COMPARE-ITEM-VALUE-LEN)
-           DISPLAY '  EXPECTED VALUE: '
-           AZ-COMPARE-ITEM-EXP-VALUE(1:AZ-COMPARE-ITEM-EXP-VALUE-LEN)
-           DISPLAY '****************************************************
-      -    '****************************'
-           CALL BZUASSRT USING BZ-P1 BZ-P2 BZ-P3 BZ-ASSERT
-           MOVE 1 TO TRACE-LEN OF BZ-TRACE
-           STRING 'ITEM NAME='
-           AZ-COMPARE-ITEM-NAME(1:AZ-COMPARE-ITEM-NAME-LEN)
-               DELIMITED BY SIZE INTO TRACE-TXT OF BZ-TRACE
-               WITH POINTER TRACE-LEN OF BZ-TRACE
-             END-STRING
-           SUBTRACT 1 FROM TRACE-LEN OF BZ-TRACE
-           SET AZ-TRACE-PTR TO ADDRESS OF TRACE-TXT OF BZ-TRACE
-           CALL BZUTRACE USING BZ-TRACE
-           MOVE 1 TO TRACE-LEN OF BZ-TRACE
-           STRING 'VALUE='
-           AZ-COMPARE-ITEM-VALUE(1:AZ-COMPARE-ITEM-VALUE-LEN)
-               DELIMITED BY SIZE INTO TRACE-TXT OF BZ-TRACE
-               WITH POINTER TRACE-LEN OF BZ-TRACE
-             END-STRING
-           SUBTRACT 1 FROM TRACE-LEN OF BZ-TRACE
-           CALL BZUTRACE USING BZ-TRACE
-           MOVE 1 TO TRACE-LEN OF BZ-TRACE
-           STRING 'EXPECTED VALUE='
-           AZ-COMPARE-ITEM-EXP-VALUE(1:AZ-COMPARE-ITEM-EXP-VALUE-LEN)
-               DELIMITED BY SIZE INTO TRACE-TXT OF BZ-TRACE
-               WITH POINTER TRACE-LEN OF BZ-TRACE
-             END-STRING
-           SUBTRACT 1 FROM TRACE-LEN OF BZ-TRACE
-           CALL BZUTRACE USING BZ-TRACE
-           EXIT.
-       END PROGRAM TEST_TEST2.
+       END PROGRAM TEST_TEST1.
       *+---------------------------------------------------------------+
       *| BZU_TEST                                                      |
       *|     THIS PROGRAM IS CALLBACK DEFINITION FOR TEST              |
@@ -341,7 +117,7 @@
        PROGRAM-ID. 'BZU_TEST'.
        DATA DIVISION.
        WORKING-STORAGE SECTION.
-       01 PROGRAM-NAME   PIC X(8)  VALUE 'CBSRGDBB'.
+       01 PROGRAM-NAME   PIC X(8)  VALUE 'CBSCSRG'.
        01 BZ-ASSERT.
          03 MESSAGE-LEN PIC S9(4) COMP-4 VALUE 24.
          03 MESSAGE-TXT PIC X(254) VALUE 'HELLO FROM TEST CALLBACK'.
@@ -409,13 +185,11 @@
          5 SYS-DATE PIC X(10).
          5 SYS-TIME PIC X(08).
          5 MESSAGES PIC X(100).
-          5 MESSAGES-AZ REDEFINES MESSAGES.
-          6 PIC X(100) DISPLAY.
        PROCEDURE DIVISION.
       * SET INPUT VALUE
-           ENTRY "PGM_INPT_CBSRGDBB" USING AZ-TEST AZ-INFO-BLOCK
+           ENTRY "PGM_INPT_CBSCSRG" USING AZ-TEST AZ-INFO-BLOCK
            DFHEIBLK DFHCOMMAREA.
-           DISPLAY 'PGM_INPT_CBSRGDBB CHECK VALUES...'.
+           DISPLAY 'PGM_INPT_CBSCSRG CHECK VALUES...'.
            MOVE 0 TO RETURN-CODE.
            INSPECT AZ-TEST TALLYING AZ-TEST-NAME-LEN FOR CHARACTERS
              BEFORE INITIAL SPACE.
@@ -427,16 +201,16 @@
            END-EVALUATE.
            PERFORM TEARDOWN.
       * EVALUATE OUTPUT VALUE
-           ENTRY "PGM_OUTP_CBSRGDBB" USING AZ-TEST AZ-INFO-BLOCK
+           ENTRY "PGM_OUTP_CBSCSRG" USING AZ-TEST AZ-INFO-BLOCK
            DFHEIBLK DFHCOMMAREA.
-           DISPLAY 'PGM_OUTP_CBSRGDBB INPUT VALUES...'.
+           DISPLAY 'PGM_OUTP_CBSCSRG INPUT VALUES...'.
            MOVE 4 TO RETURN-CODE.
            INSPECT AZ-TEST TALLYING AZ-TEST-NAME-LEN FOR CHARACTERS
              BEFORE INITIAL SPACE.
            EVALUATE AZ-TEST(1:AZ-TEST-NAME-LEN)
            WHEN SPACE
              CONTINUE
-           WHEN 'TEST2'
+           WHEN 'TEST1'
              MOVE 0 TO RETURN-CODE
            WHEN OTHER
              CONTINUE
@@ -456,7 +230,7 @@
        WORKING-STORAGE SECTION.
        01 AZ-TEST-NAME-LEN      PIC S9(9) COMP-5.
        01 AZ-TESTCASE-ID        PIC X(36)
-           VALUE '9be407fb-a469-42fd-a765-53d90da32a38'.
+           VALUE '438bd47d-5243-4c2e-b790-5b0697a791f3'.
        LINKAGE SECTION.
        01 AZ-TEST               PIC X(80).
        01 AZ-TEST-ID            PIC X(80).
@@ -670,12 +444,12 @@
       * CICS_INPT.
            ENTRY 'CICS_INPT'.
            DISPLAY 'CICS_INPT ...'
-           MOVE 4 TO RETURN-CODE.
+           MOVE 0 TO RETURN-CODE.
            GOBACK.
       * CICS_OUTP.
            ENTRY 'CICS_OUTP'.
            DISPLAY 'CICS_OUTP ...'
-           MOVE 4 TO RETURN-CODE.
+           MOVE 0 TO RETURN-CODE.
            GOBACK.
       * CICS_INPT_0E08 FOR RETURN.
            ENTRY 'CICS_INPT_0E08'.
@@ -694,12 +468,12 @@
       * DB2_INPT.
            ENTRY 'DB2_INPT'.
            DISPLAY 'DB2_INPT ...'
-           MOVE 4 TO RETURN-CODE.
+           MOVE 0 TO RETURN-CODE.
            GOBACK.
       * DB2_OUTP.
            ENTRY 'DB2_OUTP'.
            DISPLAY 'DB2_OUTP ...'
-           MOVE 4 TO RETURN-CODE.
+           MOVE 0 TO RETURN-CODE.
            GOBACK.
        END PROGRAM 'AZU_GENERIC_DB2'.
       *+---------------------------------------------------------------+
@@ -708,7 +482,7 @@
       *|                                                               |
       *+---------------------------------------------------------------+
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. 'CICS_0E08_CBSRGDBB'.
+       PROGRAM-ID. 'CICS_0E08_CBSCSRG'.
        DATA DIVISION.
        WORKING-STORAGE SECTION.
        01 BZ-ASSERT.
@@ -783,11 +557,11 @@
        01 AZ-CICS-TARGET-NAME-DEF8 PIC X(8).
        PROCEDURE DIVISION.
       * CHECK OUTPUT VALUE
-      * CICS_INPT_0E08_CBSRGDBB.
-           ENTRY 'CICS_INPT_0E08_CBSRGDBB' USING AZ-TEST
+      * CICS_INPT_0E08_CBSCSRG.
+           ENTRY 'CICS_INPT_0E08_CBSCSRG' USING AZ-TEST
            AZ-INFO-BLOCK AZ-DFHEIBLK AZ-DFHCOMMAREA ARG0 ARG1 ARG2
            ARG3 ARG4 ARG5 ARG6 ARG7 ARG8 ARG9 ARG10.
-           DISPLAY 'CICS_0E08_CBSRGDBB CHECK VALUES...'
+           DISPLAY 'CICS_0E08_CBSCSRG CHECK VALUES...'
            MOVE 4 TO RETURN-CODE.
            MOVE 0 TO AZ-TEST-LEN.
            INSPECT AZ-TEST TALLYING AZ-TEST-LEN FOR
@@ -816,8 +590,7 @@
                EVALUATE AZ-TEST(1:AZ-TEST-LEN)
                  WHEN SPACE
                    CONTINUE
-                 WHEN 'TEST2'
-                   PERFORM O0E080-TEST2
+                 WHEN 'TEST1'
                    CONTINUE
                  WHEN OTHER
                    CONTINUE
@@ -826,11 +599,11 @@
            END-IF.
            PERFORM TEARDOWN.
       * SET INPUT VALUE
-      * CICS_OUTP_0E08_CBSRGDBB.
-           ENTRY 'CICS_OUTP_0E08_CBSRGDBB' USING AZ-TEST
+      * CICS_OUTP_0E08_CBSCSRG.
+           ENTRY 'CICS_OUTP_0E08_CBSCSRG' USING AZ-TEST
            AZ-INFO-BLOCK AZ-DFHEIBLK AZ-DFHCOMMAREA ARG0 ARG1 ARG2
            ARG3 ARG4 ARG5 ARG6 ARG7 ARG8 ARG9 ARG10.
-           DISPLAY 'CICS_0E08_CBSRGDBB INPUT VALUES...'
+           DISPLAY 'CICS_0E08_CBSCSRG INPUT VALUES...'
            MOVE 0 TO RETURN-CODE.
            MOVE 0 TO AZ-TEST-LEN.
            INSPECT AZ-TEST TALLYING AZ-TEST-LEN FOR
@@ -859,7 +632,7 @@
                EVALUATE AZ-TEST(1:AZ-TEST-LEN)
                  WHEN SPACE
                    CONTINUE
-                 WHEN 'TEST2'
+                 WHEN 'TEST1'
                    CONTINUE
                  WHEN OTHER
                    CONTINUE
@@ -867,12 +640,6 @@
              END-IF
            END-IF.
            PERFORM TEARDOWN.
-       O0E080-TEST2.
-           IF AZ-RECORD-COUNT-OT(1) = 0 THEN
-             CONTINUE
-           ELSE
-             CONTINUE
-           END-IF.
        GETLINENUM.
            MOVE 1 TO AZ-LINE-J
            PERFORM VARYING AZ-LINE-I FROM AZ-LINE-BYTE BY 1
@@ -882,6 +649,249 @@
            END-PERFORM
            EXIT.
        TEARDOWN.
-           DISPLAY 'CICS_0E08_CBSRGDBB SUCCESSFUL.'
+           DISPLAY 'CICS_0E08_CBSCSRG SUCCESSFUL.'
            GOBACK.
-       END PROGRAM 'CICS_0E08_CBSRGDBB'.
+       END PROGRAM 'CICS_0E08_CBSCSRG'.
+      *+---------------------------------------------------------------+
+      *| PROGRAM FOR EXEC SQL SELECT_INTO                              |
+      *|    FUNCTION CODE: 00E7                                        |
+      *|                                                               |
+      *+---------------------------------------------------------------+
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. 'DB2_00E7_CBSCSRG'.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 BZ-ASSERT.
+         03 MESSAGE-LEN PIC S9(4) COMP-4 VALUE 24.
+         03 MESSAGE-TXT PIC X(254) VALUE 'HELLO FROM DB2 CALLBACK'.
+       01  BZ-P1 PIC S9(9) COMP-4 VALUE 4.
+       01  BZ-P2 PIC S9(9) COMP-4 VALUE 2001.
+       01  BZ-P3 PIC X(3) VALUE 'AZU'.
+       01 BZ-TRACE.
+         03 TRACE-LEN       PIC S9(4) COMP-4 VALUE 5.
+         03 TRACE-TXT       PIC X(254) VALUE 'TRACE'.
+       01 BZUASSRT          PIC X(8) VALUE 'BZUASSRT'.
+       01 BZUTRACE          PIC X(8) VALUE 'BZUTRACE'.
+       01 AZ-TRACE-PTR      POINTER.
+       01 AZ-TEST-LEN        PIC S9(8) COMP.
+       01 AZ-RECORD.
+         03 AZ-RECORD-COUNT-OT OCCURS 3 PIC 9(5) COMP-5 VALUE 0.
+         03 AZ-RECORD-COUNT-IN OCCURS 3 PIC 9(5) COMP-5 VALUE 0.
+         03 AZ-OUT-PARM-NUM  PIC 9(8).
+         03 AZ-IN-PARM-NUM   PIC 9(8).
+         03 AZ-STMT-NUM      PIC 9(9).
+       01 AZ-GRP-INDEX       PIC 9(8).
+       01 AZ-FLAG-IN         PIC 9(1).
+       01 AZ-RECORD-PTR      POINTER.
+       LOCAL-STORAGE SECTION.
+       01 AZ-HOSTVAR-PTR     POINTER.
+       01 AZ-HOSTVAR-PTR-ADDR
+           REDEFINES AZ-HOSTVAR-PTR PIC 9(9) COMP-5.
+       LINKAGE SECTION.
+       01 AZ-TEST            PIC X(80).
+       01 AZ-INFO-BLOCK.
+          COPY BZUITERC.
+       01 AZ-APLIST.
+          COPY BZUDB2CP.
+       01 AZ-WK-RECORD-COUNT PIC 9(5) COMP-5.
+       01 ARGO1.
+          COPY BZUDB2CV.
+       01 ARGI1          .
+          COPY BZUDB2CV.
+       01 ARGI2          .
+          COPY BZUDB2CV.
+       01 ARGI3          .
+          COPY BZUDB2CV.
+       01 ARGI4          .
+          COPY BZUDB2CV.
+       01 ARGI5          .
+          COPY BZUDB2CV.
+       01 ARGI6          .
+          COPY BZUDB2CV.
+       01 ARGI7          .
+          COPY BZUDB2CV.
+       01 ARGI8          .
+          COPY BZUDB2CV.
+       01 ARGI9          .
+          COPY BZUDB2CV.
+       01 ARGI10         .
+          COPY BZUDB2CV.
+       01 ARGI11         .
+          COPY BZUDB2CV.
+       01 ARGI12         .
+          COPY BZUDB2CV.
+       01 AZ-SQLDA.
+          COPY BZUDB2CA.
+       PROCEDURE DIVISION.
+      * CHECK OUTPUT VALUE
+      * DB2_INPT_00E7_CBSCSRG.
+           ENTRY 'DB2_INPT_00E7_CBSCSRG' USING AZ-TEST
+           AZ-INFO-BLOCK AZ-APLIST ARGO1.
+           DISPLAY 'DB2_00E7_CBSCSRG CHECK VALUES...'
+           MOVE 4 TO RETURN-CODE.
+           MOVE SQL-STMT-NUM OF AZ-APLIST TO AZ-STMT-NUM
+           SET ADDRESS OF AZ-SQLDA TO SQL-VPARMPTR
+           MOVE SQLDA-NUM OF AZ-SQLDA TO AZ-OUT-PARM-NUM
+           SET ADDRESS OF AZ-SQLDA TO SQL-APARMPTR
+           MOVE SQLDA-NUM OF AZ-SQLDA TO AZ-IN-PARM-NUM
+           MOVE 0 TO AZ-TEST-LEN.
+           INSPECT AZ-TEST TALLYING AZ-TEST-LEN FOR
+           CHARACTERS BEFORE INITIAL SPACE.
+      * EXEC SQL SELECT_INTO : OUT=0 IN=1
+           IF AZ-OUT-PARM-NUM = 0 AND
+              AZ-IN-PARM-NUM = 1 THEN
+             DISPLAY 'EXEC SQL SELECT_INTO'
+              ' : OUT=' 0 ' IN=' 1
+              ' L=' AZ-STMT-NUM
+           END-IF.
+      * EXEC SQL SELECT_INTO : OUT=1 IN=12
+           IF AZ-OUT-PARM-NUM = 1 AND
+              AZ-IN-PARM-NUM = 12 THEN
+             DISPLAY 'EXEC SQL SELECT_INTO'
+              ' : OUT=' 1 ' IN=' 12
+              ' L=' AZ-STMT-NUM
+           END-IF.
+      * EXEC SQL SELECT_INTO : OUT=1 IN=1
+           IF AZ-OUT-PARM-NUM = 1 AND
+              AZ-IN-PARM-NUM = 1 THEN
+             DISPLAY 'EXEC SQL SELECT_INTO'
+              ' : OUT=' 1 ' IN=' 1
+              ' L=' AZ-STMT-NUM
+           END-IF.
+           PERFORM TEARDOWN.
+      * SET INPUT VALUE
+      * DB2_OUTP_00E7_CBSCSRG.
+           ENTRY 'DB2_OUTP_00E7_CBSCSRG' USING AZ-TEST
+           AZ-INFO-BLOCK AZ-APLIST ARGI1 ARGI2 ARGI3 ARGI4 ARGI5 ARGI6
+           ARGI7 ARGI8 ARGI9 ARGI10 ARGI11 ARGI12.
+           DISPLAY 'DB2_00E7_CBSCSRG INPUT VALUES...'
+           MOVE 0 TO RETURN-CODE.
+           MOVE SQL-STMT-NUM OF AZ-APLIST TO AZ-STMT-NUM
+           SET ADDRESS OF AZ-SQLDA TO SQL-VPARMPTR
+           MOVE SQLDA-NUM OF AZ-SQLDA TO AZ-OUT-PARM-NUM
+           SET ADDRESS OF AZ-SQLDA TO SQL-APARMPTR
+           MOVE SQLDA-NUM OF AZ-SQLDA TO AZ-IN-PARM-NUM
+           MOVE 0 TO AZ-TEST-LEN.
+           INSPECT AZ-TEST TALLYING AZ-TEST-LEN FOR
+           CHARACTERS BEFORE INITIAL SPACE.
+      * EXEC SQL SELECT_INTO : OUT=0 IN=1
+           IF AZ-OUT-PARM-NUM = 0 AND
+              AZ-IN-PARM-NUM = 1 THEN
+             DISPLAY 'EXEC SQL SELECT_INTO'
+              ' : OUT=' 0 ' IN=' 1
+              ' L=' AZ-STMT-NUM
+           END-IF.
+      * EXEC SQL SELECT_INTO : OUT=1 IN=12
+           IF AZ-OUT-PARM-NUM = 1 AND
+              AZ-IN-PARM-NUM = 12 THEN
+             DISPLAY 'EXEC SQL SELECT_INTO'
+              ' : OUT=' 1 ' IN=' 12
+              ' L=' AZ-STMT-NUM
+           END-IF.
+      * EXEC SQL SELECT_INTO : OUT=1 IN=1
+           IF AZ-OUT-PARM-NUM = 1 AND
+              AZ-IN-PARM-NUM = 1 THEN
+             DISPLAY 'EXEC SQL SELECT_INTO'
+              ' : OUT=' 1 ' IN=' 1
+              ' L=' AZ-STMT-NUM
+           END-IF.
+           PERFORM TEARDOWN.
+       TEARDOWN.
+           DISPLAY 'DB2_00E7_CBSCSRG SUCCESSFUL.'
+           GOBACK.
+       END PROGRAM 'DB2_00E7_CBSCSRG'.
+      *+---------------------------------------------------------------+
+      *| PROGRAM FOR EXEC SQL UPDATE                                   |
+      *|    FUNCTION CODE: 00EA                                        |
+      *|                                                               |
+      *+---------------------------------------------------------------+
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. 'DB2_00EA_CBSCSRG'.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 BZ-ASSERT.
+         03 MESSAGE-LEN PIC S9(4) COMP-4 VALUE 24.
+         03 MESSAGE-TXT PIC X(254) VALUE 'HELLO FROM DB2 CALLBACK'.
+       01  BZ-P1 PIC S9(9) COMP-4 VALUE 4.
+       01  BZ-P2 PIC S9(9) COMP-4 VALUE 2001.
+       01  BZ-P3 PIC X(3) VALUE 'AZU'.
+       01 BZ-TRACE.
+         03 TRACE-LEN       PIC S9(4) COMP-4 VALUE 5.
+         03 TRACE-TXT       PIC X(254) VALUE 'TRACE'.
+       01 BZUASSRT          PIC X(8) VALUE 'BZUASSRT'.
+       01 BZUTRACE          PIC X(8) VALUE 'BZUTRACE'.
+       01 AZ-TRACE-PTR      POINTER.
+       01 AZ-TEST-LEN        PIC S9(8) COMP.
+       01 AZ-RECORD.
+         03 AZ-RECORD-COUNT-OT OCCURS 1 PIC 9(5) COMP-5 VALUE 0.
+         03 AZ-RECORD-COUNT-IN OCCURS 1 PIC 9(5) COMP-5 VALUE 0.
+         03 AZ-OUT-PARM-NUM  PIC 9(8).
+         03 AZ-IN-PARM-NUM   PIC 9(8).
+         03 AZ-STMT-NUM      PIC 9(9).
+       01 AZ-GRP-INDEX       PIC 9(8).
+       01 AZ-FLAG-IN         PIC 9(1).
+       01 AZ-RECORD-PTR      POINTER.
+       LOCAL-STORAGE SECTION.
+       01 AZ-HOSTVAR-PTR     POINTER.
+       01 AZ-HOSTVAR-PTR-ADDR
+           REDEFINES AZ-HOSTVAR-PTR PIC 9(9) COMP-5.
+       LINKAGE SECTION.
+       01 AZ-TEST            PIC X(80).
+       01 AZ-INFO-BLOCK.
+          COPY BZUITERC.
+       01 AZ-APLIST.
+          COPY BZUDB2CP.
+       01 AZ-WK-RECORD-COUNT PIC 9(5) COMP-5.
+       01 ARGO1.
+          COPY BZUDB2CV.
+       01 AZ-SQLDA.
+          COPY BZUDB2CA.
+       PROCEDURE DIVISION.
+      * CHECK OUTPUT VALUE
+      * DB2_INPT_00EA_CBSCSRG.
+           ENTRY 'DB2_INPT_00EA_CBSCSRG' USING AZ-TEST
+           AZ-INFO-BLOCK AZ-APLIST ARGO1.
+           DISPLAY 'DB2_00EA_CBSCSRG CHECK VALUES...'
+           MOVE 4 TO RETURN-CODE.
+           MOVE SQL-STMT-NUM OF AZ-APLIST TO AZ-STMT-NUM
+           SET ADDRESS OF AZ-SQLDA TO SQL-VPARMPTR
+           MOVE SQLDA-NUM OF AZ-SQLDA TO AZ-OUT-PARM-NUM
+           SET ADDRESS OF AZ-SQLDA TO SQL-APARMPTR
+           MOVE SQLDA-NUM OF AZ-SQLDA TO AZ-IN-PARM-NUM
+           MOVE 0 TO AZ-TEST-LEN.
+           INSPECT AZ-TEST TALLYING AZ-TEST-LEN FOR
+           CHARACTERS BEFORE INITIAL SPACE.
+      * EXEC SQL UPDATE : OUT=1 IN=0
+           IF AZ-OUT-PARM-NUM = 1 AND
+              AZ-IN-PARM-NUM = 0 THEN
+             DISPLAY 'EXEC SQL UPDATE'
+              ' : OUT=' 1 ' IN=' 0
+              ' L=' AZ-STMT-NUM
+           END-IF.
+           PERFORM TEARDOWN.
+      * SET INPUT VALUE
+      * DB2_OUTP_00EA_CBSCSRG.
+           ENTRY 'DB2_OUTP_00EA_CBSCSRG' USING AZ-TEST
+           AZ-INFO-BLOCK AZ-APLIST .
+           DISPLAY 'DB2_00EA_CBSCSRG INPUT VALUES...'
+           MOVE 0 TO RETURN-CODE.
+           MOVE SQL-STMT-NUM OF AZ-APLIST TO AZ-STMT-NUM
+           SET ADDRESS OF AZ-SQLDA TO SQL-VPARMPTR
+           MOVE SQLDA-NUM OF AZ-SQLDA TO AZ-OUT-PARM-NUM
+           SET ADDRESS OF AZ-SQLDA TO SQL-APARMPTR
+           MOVE SQLDA-NUM OF AZ-SQLDA TO AZ-IN-PARM-NUM
+           MOVE 0 TO AZ-TEST-LEN.
+           INSPECT AZ-TEST TALLYING AZ-TEST-LEN FOR
+           CHARACTERS BEFORE INITIAL SPACE.
+      * EXEC SQL UPDATE : OUT=1 IN=0
+           IF AZ-OUT-PARM-NUM = 1 AND
+              AZ-IN-PARM-NUM = 0 THEN
+             DISPLAY 'EXEC SQL UPDATE'
+              ' : OUT=' 1 ' IN=' 0
+              ' L=' AZ-STMT-NUM
+           END-IF.
+           PERFORM TEARDOWN.
+       TEARDOWN.
+           DISPLAY 'DB2_00EA_CBSCSRG SUCCESSFUL.'
+           GOBACK.
+       END PROGRAM 'DB2_00EA_CBSCSRG'.
