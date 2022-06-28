@@ -807,4 +807,3 @@ def loadFileLevelPropertiesFromFile(List<String> buildList) {
 		}
 	}
 }
-
