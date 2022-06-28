@@ -4,12 +4,16 @@ import com.ibm.dbb.dependency.*
 import com.ibm.dbb.build.*
 import groovy.transform.*
 
+@Field BuildProperties props = BuildProperties.getInstance()
+@Field RepositoryClient repositoryClient
+
 /*
  * Tests if directory is in a local git repository
  *
  * @param  String dir  		Directory to test
  * @return boolean		
  */
+
 def isGitDir(String dir) {
 	String cmd = "git -C $dir rev-parse --is-inside-work-tree"
 	StringBuffer gitResponse = new StringBuffer()
@@ -19,7 +23,9 @@ def isGitDir(String dir) {
 	Process process = cmd.execute()
 	process.waitForProcessOutput(gitResponse, gitError)
 	if (gitError) {
-		println("*? Warning executing isGitDir($dir). Git command: $cmd error: $gitError")
+		String warningMsg = "*? Warning executing isGitDir($dir). Git command: $cmd error: $gitError"
+		println(warningMsg)
+		updateBuildResult(warningMsg:warningMsg,client:getRepositoryClient())
 	}
 	else if (gitResponse) {
 		isGit = gitResponse.toString().trim().toBoolean()
@@ -77,6 +83,32 @@ def getCurrentGitDetachedBranch(String gitDir) {
 }
 
 /*
+ * Returns the current Git branch
+ *
+ * @param  String gitGit            		git directory
+ * @return List 							list of remote branches
+ */
+def getRemoteGitBranches(String gitDir) {
+
+	Set<String> remoteBranches = new HashSet<String>()
+	String cmd = "git -C $gitDir branch -r"
+
+	StringBuffer gitOut = new StringBuffer()
+	StringBuffer gitError = new StringBuffer()
+
+	Process process = cmd.execute()
+	process.waitForProcessOutput(gitOut, gitError)
+	if (gitError) {
+		println("*! Error executing Git command: $cmd error: $gitError")
+	} else {
+		for (line in gitOut.toString().split("\n")) {
+			remoteBranches.add(line.replaceAll(".*?/", ""))
+		}
+	}
+	return remoteBranches
+}
+
+/*
  * Returns true if this is a detached HEAD
  *
  * @param  String gitDir  		Local Git repository directory
@@ -101,15 +133,19 @@ def isGitDetachedHEAD(String gitDir) {
  * @param  String gitDir  		Local Git repository directory
  * @return String gitHash       The current Git hash
  */
-def getCurrentGitHash(String gitDir) {
+def getCurrentGitHash(String gitDir, boolean abbrev) {
 	String cmd = "git -C $gitDir rev-parse HEAD"
+	if (abbrev) cmd = "git -C $gitDir rev-parse --short=8 HEAD"
 	StringBuffer gitHash = new StringBuffer()
 	StringBuffer gitError = new StringBuffer()
 
 	Process process = cmd.execute()
 	process.waitForProcessOutput(gitHash, gitError)
 	if (gitError) {
-		print("*! Error executing Git command: $cmd error: $gitError")
+		String errorMsg = "*! Error executing Git command: $cmd error: $gitError"
+		println(errorMsg)
+		props.error = "true"
+		updateBuildResult(errorMsg:errorMsg,client:getRepositoryClient())
 	}
 	return gitHash.toString().trim()
 }
@@ -176,8 +212,40 @@ def getPreviousGitHash(String gitDir) {
 	}
 }
 
+/*
+ * getChangedFiles - assembles a git diff command to support the impactBuild for a given directory
+ *  returns the changed, deleted and renamed files.
+ * 
+ */
 def getChangedFiles(String gitDir, String baseHash, String currentHash) {
-	String cmd = "git -C $gitDir --no-pager diff --name-status $baseHash $currentHash"
+	String gitCmd = "git -C $gitDir --no-pager diff --name-status $baseHash $currentHash"
+	return getChangedFiles(gitCmd)
+}
+
+/*
+ * getMergeChanges - assembles a git triple-dot diff command to support mergeBuild scenarios 
+ *  returns the changed, deleted and renamed files between current HEAD and the provided baseline.
+ *  
+ */
+def getMergeChanges(String gitDir, String baselineReference) {
+	String gitCmd = "git -C $gitDir --no-pager diff --name-status remotes/origin/$baselineReference...HEAD"
+	return getChangedFiles(gitCmd)
+}
+
+/*
+ * getMergeChanges - assembles a git triple-dot diff command to support mergeBuild scenarios
+ *  returns the changed, deleted and renamed files between current HEAD and the provided baseline.
+ *
+ */
+def getConcurrentChanges(String gitDir, String baselineReference) {
+	String gitCmd = "git -C $gitDir --no-pager diff --name-status HEAD...remotes/origin/$baselineReference"
+	return getChangedFiles(gitCmd)
+}
+
+/*
+ * getChangedFiles - internal method to submit the a gitDiff command and calucate and classify the idenfified changes 
+ */
+def getChangedFiles(String cmd) {
 	def git_diff = new StringBuffer()
 	def git_error = new StringBuffer()
 	def changedFiles = []
@@ -189,8 +257,10 @@ def getChangedFiles(String gitDir, String baseHash, String currentHash) {
 
 	// handle command error
 	if (git_error.size() > 0) {
-		println("*! Error executing Git command: $cmd error: $git_error")
-		println ("*! Attempting to parse unstable git command for changed files...")
+		String errorMsg = "*! Error executing Git command: $cmd error: $git_error \n *! Attempting to parse unstable git command for changed files..."
+		println(errorMsg)
+		props.error = "true"
+		updateBuildResult(errorMsg:errorMsg,client:getRepositoryClient())
 	}
 
 	for (line in git_diff.toString().split("\n")) {
@@ -199,16 +269,22 @@ def getChangedFiles(String gitDir, String baseHash, String currentHash) {
 			gitDiffOutput = line.split()
 			action = gitDiffOutput[0]
 			file = gitDiffOutput[1]
-			
+
 			if (action == "M" || action == "A") { // handle changed and new added files
 				changedFiles.add(file)
 			} else if (action == "D") {// handle deleted files
 				deletedFiles.add(file)
-			} else if (action == "R100") { // handle renamed file
+			} else if (action.startsWith("R")) { // handle renamed file
 				renamedFile = gitDiffOutput[1]
 				newFileName = gitDiffOutput[2]
 				changedFiles.add(newFileName) // will rebuild file
 				renamedFiles.add(renamedFile)
+				//evaluate similarity score
+				similarityScore = action.substring(1) as int
+				if (similarityScore < 50){
+					println ("*! (GitUtils.getChangedFiles - Renaming Scenario) Low similarity score for renamed file $renamedFile : $similarityScore with new file $newFileName. ")
+				}
+
 			}
 			else {
 				println ("*! (GitUtils.getChangedFiles) Error in determining action in git diff. ")
@@ -252,7 +328,7 @@ def getCurrentChangedFiles(String gitDir, String currentHash, String verbose) {
 			gitDiffOutput = line.split()
 			action = gitDiffOutput[0]
 			file = gitDiffOutput[1]
-			
+
 			if (action == "M" || action == "A") { // handle changed and new added files
 				changedFiles.add(file)
 			} else if (action == "D") {// handle deleted files
@@ -280,3 +356,63 @@ def getCurrentChangedFiles(String gitDir, String currentHash, String verbose) {
 	]
 }
 
+def getChangedProperties(String gitDir, String baseline, String currentHash, String propertiesFile) {
+	String cmd = "git -C $gitDir diff --ignore-all-space --no-prefix -U0 $baseline $currentHash $propertiesFile"
+
+	def gitDiff = new StringBuffer()
+	def gitError = new StringBuffer()
+	Properties changedProperties = new Properties()
+
+	Process process = cmd.execute()
+	process.waitForProcessOutput(gitDiff, gitError)
+
+	for (line in gitDiff.toString().split("\n")) {
+		if (line.startsWith("+") && line.contains("=")){
+			try {
+				gitDiffOutput = line.substring(1)
+				changedProperties.load(new StringReader(gitDiffOutput));
+			}
+			catch (Exception e) {
+				// no changes or unhandled format
+			}
+		}
+	}
+
+	return changedProperties.propertyNames()
+}
+
+/** helper methods **/
+
+def getRepositoryClient() {
+	if (!repositoryClient && props."dbb.RepositoryClient.url")
+		repositoryClient = new RepositoryClient().forceSSLTrusted(true)
+	return repositoryClient
+}
+
+/*
+ * updateBuildResult - for git cmd related issues
+ */
+def updateBuildResult(Map args) {
+	// args : errorMsg / warningMsg, client:repoClient
+
+	// update build results only in non-userbuild scenarios
+	if (args.client && !props.userBuild) {
+		def buildResult = args.client.getBuildResult(props.applicationBuildGroup, props.applicationBuildLabel)
+		if (!buildResult) {
+			println "*! No build result found for BuildGroup '${props.applicationBuildGroup}' and BuildLabel '${props.applicationBuildLabel}'"
+			return
+		}
+		// add error message
+		if (args.errorMsg) {
+			buildResult.setStatus(buildResult.ERROR)
+			buildResult.addProperty("error", args.errorMsg)
+		}
+		// add warning message, but keep result status
+		if (args.warningMsg) {
+			// buildResult.setStatus(buildResult.WARNING)
+			buildResult.addProperty("warning", args.warningMsg)
+		}
+		// save result
+		buildResult.save()
+	}
+}

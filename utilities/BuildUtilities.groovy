@@ -3,16 +3,18 @@ import com.ibm.dbb.repository.*
 import com.ibm.dbb.dependency.*
 import com.ibm.dbb.build.*
 import groovy.transform.*
+import groovy.json.JsonParserType
+import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
 import com.ibm.dbb.build.DBBConstants.CopyMode
+import com.ibm.dbb.build.report.records.*
+import com.ibm.jzos.FileAttribute
 import groovy.ant.*
 
 // define script properties
 @Field BuildProperties props = BuildProperties.getInstance()
 @Field HashSet<String> copiedFileCache = new HashSet<String>()
 @Field def gitUtils = loadScript(new File("GitUtilities.groovy"))
-
-
 
 /*
  * assertBuildProperties - verify that required build properties for a script exist
@@ -29,8 +31,16 @@ def assertBuildProperties(String requiredProps) {
 	}
 }
 
+/*
+ * createFullBuildList() - returns all existing files of the build workspace for the --fullBuild build type
+ * 
+ */
 def createFullBuildList() {
 	Set<String> buildSet = new HashSet<String>()
+	
+	// PropertyMappings
+	PropertyMappings githashBuildableFilesMap = new PropertyMappings("githashBuildableFilesMap")
+	
 	// create the list of build directories
 	List<String> srcDirs = []
 	if (props.applicationSrcDirs)
@@ -38,7 +48,15 @@ def createFullBuildList() {
 
 	srcDirs.each{ dir ->
 		dir = getAbsolutePath(dir)
-		buildSet.addAll(getFileSet(dir, true, '**/*.*', props.excludeFileList))
+		Set<String> fileSet =getFileSet(dir, true, '**/*.*', props.excludeFileList)
+		buildSet.addAll(fileSet)
+		
+		// capture abbreviated gitHash for all buildable files
+		String abbrevHash = gitUtils.getCurrentGitHash(dir, true)
+		buildSet.forEach { buildableFile ->
+			githashBuildableFilesMap.addFilePattern(abbrevHash, buildableFile)
+		}
+		
 	}
 
 	return buildSet
@@ -61,13 +79,19 @@ def getFileSet(String dir, boolean relativePaths, String includeFileList, String
 	return fileSet
 }
 
-
 /*
  * copySourceFiles - copies both the program being built and the program
  * dependencies from USS directories to data sets
+ * 
+ * parameters:
+ *  - build file
+ *  - target dataset for build file
+ *  - name of the DBB PropertyMapping for dependencies (optional)
+ *  - name of the map for alternate library names for PLI and COBOL (optional)
+ *  - DependencyResolver to resolve dependencies
  */
 
-def copySourceFiles(String buildFile, String srcPDS, String dependencyPDS, DependencyResolver dependencyResolver) {
+def copySourceFiles(String buildFile, String srcPDS, String dependencyDatasetMapping, String dependenciesAlternativeLibraryNameMapping, Object dependencyResolver) {
 	// only copy the build file once
 	if (!copiedFileCache.contains(buildFile)) {
 		copiedFileCache.add(buildFile)
@@ -76,41 +100,139 @@ def copySourceFiles(String buildFile, String srcPDS, String dependencyPDS, Depen
 				.member(CopyToPDS.createMemberName(buildFile))
 				.execute()
 	}
+	
+	if (dependencyDatasetMapping && props.userBuildDependencyFile && props.userBuild) {
+		if (props.verbose) println "*** User Build Dependency File Detected. Skipping DBB Dependency Resolution."
+		// userBuildDependencyFile present (passed from the IDE)
+		// Skip dependency resolution, extract dependencies from userBuildDependencyFile, and copy directly dataset
+		// Load property mapping containing the map of targetPDS and dependencyfile
+		PropertyMappings dependenciesDatasetMapping = new PropertyMappings(dependencyDatasetMapping)
+		
+		// parse JSON and validate fields of userBuildDependencyFile
+		def depFileData = validateDependencyFile(buildFile, props.userBuildDependencyFile)
 
-	// resolve the logical dependencies to physical files to copy to data sets
-	if (dependencyPDS && dependencyResolver) {
-		List<PhysicalDependency> physicalDependencies = dependencyResolver.resolve()
-		if (props.verbose) {
-			println "*** Resolution rules for $buildFile:"
-			dependencyResolver.getResolutionRules().each{ rule -> println rule }
+		// Manually create logical file for the user build program
+		String lname = CopyToPDS.createMemberName(buildFile)
+		String language = props.getFileProperty('dbb.DependencyScanner.languageHint', buildFile) ?: 'UNKN'
+		LogicalFile lfile = new LogicalFile(lname, buildFile, language, depFileData.isCICS, depFileData.isSQL, depFileData.isDLI)
+		
+		// get list of dependencies from userBuildDependencyFile
+		List<String> dependencyPaths = depFileData.dependencies
+
+		// copy each dependency from USS to member of depedencyPDS
+		dependencyPaths.each { dependencyPath ->
+			// if dependency is relative, convert to absolute path
+			String dependencyLoc = getAbsolutePath(dependencyPath)
+
+			// Assume library is SYSLIB for all dependencies
+			String dependencyPDS = props.getProperty(dependenciesDatasetMapping.getValue(dependencyPath))
+
+			// only copy the dependency file once per script invocation
+			if (!copiedFileCache.contains(dependencyLoc)) {
+				copiedFileCache.add(dependencyLoc)
+				// create member name
+				String memberName = CopyToPDS.createMemberName(dependencyPath)
+				// retrieve zUnit playback file extension
+				zunitFileExtension = (props.zunit_playbackFileExtension) ? props.zunit_playbackFileExtension : null
+				// get index of last '.' in file path to extract the file extension
+				def extIndex = dependencyLoc.lastIndexOf('.')
+				if( zunitFileExtension && !zunitFileExtension.isEmpty() && (dependencyLoc.substring(extIndex).contains(zunitFileExtension))){
+					new CopyToPDS().file(new File(dependencyLoc))
+							.copyMode(CopyMode.BINARY)
+							.dataset(dependencyPDS)
+							.member(memberName)
+							.execute()
+				}
+				else
+				{
+					new CopyToPDS().file(new File(dependencyLoc))
+							.dataset(dependencyPDS)
+							.member(memberName)
+							.execute()
+				}
+			}
 		}
+	}
+	else if (dependencyDatasetMapping && dependencyResolver) {
+		// resolve the logical dependencies to physical files to copy to data sets
+		List<PhysicalDependency> physicalDependencies
+
+		if (dependencyResolver instanceof DependencyResolver) { // deprecated DependencyResolver
+			physicalDependencies = dependencyResolver.resolve()
+			if (props.verbose) {
+				println "*** Resolution rules for $buildFile:"
+
+				if (props.formatConsoleOutput && props.formatConsoleOutput.toBoolean()) {
+					printResolutionRules(dependencyResolver.getResolutionRules())
+				} else {
+					dependencyResolver.getResolutionRules().each{ rule -> println rule }
+				}
+			}
+		} else if (props.useSearchConfiguration && props.useSearchConfiguration.toBoolean() && assertDbbBuildToolkitVersion(props.dbbToolkitVersion, "1.1.2")) {
+			resolverUtils = loadScript(new File("ResolverUtilities.groovy"))
+			physicalDependencies = resolverUtils.resolveDependencies(dependencyResolver, buildFile)
+		}
+
 		if (props.verbose) println "*** Physical dependencies for $buildFile:"
 
+		// Load property mapping containing the map of targetPDS and dependencyfile
+		PropertyMappings dependenciesDatasetMapping = new PropertyMappings(dependencyDatasetMapping)
+
+		if (physicalDependencies.size() != 0) {
+			if (props.verbose && props.formatConsoleOutput && props.formatConsoleOutput.toBoolean()) {
+				printPhysicalDependencies(physicalDependencies)
+			}
+		}
+		
 		physicalDependencies.each { physicalDependency ->
-			if (props.verbose) println physicalDependency
+			// Write Physical Dependency details to log on verbose, not on formatConsoleOutput
+			if (props.verbose && !(props.formatConsoleOutput && props.formatConsoleOutput.toBoolean())) 	println physicalDependency
+			
 			if (physicalDependency.isResolved()) {
+
+				// obtain target dataset based on Mappings
+				// Order :
+				//    1. langprefix_dependenciesAlternativeLibraryNameMapping based on the library setting recognized by DBB (COBOL and PLI)
+				//    2. langprefix_dependenciesDatasetMapping as a manual overwrite to determine an alternative library used in the default dd concatentation 
+				String dependencyPDS 
+				if (!physicalDependency.getLibrary().equals("SYSLIB") && dependenciesAlternativeLibraryNameMapping) {
+					dependencyPDS = props.getProperty(parseJSONStringToMap(dependenciesAlternativeLibraryNameMapping).get(physicalDependency.getLibrary()))
+				}
+				if (dependencyPDS == null && dependenciesDatasetMapping){
+					dependencyPDS = props.getProperty(dependenciesDatasetMapping.getValue(physicalDependency.getFile()))
+				}
+
 				String physicalDependencyLoc = "${physicalDependency.getSourceDir()}/${physicalDependency.getFile()}"
 
-				// only copy the dependency file once per script invocation
-				if (!copiedFileCache.contains(physicalDependencyLoc)) {
-					copiedFileCache.add(physicalDependencyLoc)
+				if (dependencyPDS != null) {
 
-					//retrieve zUnitFileExtension plbck
-					zunitFileExtension = (props.zunit_playbackFileExtension) ? props.zunit_playbackFileExtension : null
+					// only copy the dependency file once per script invocation
+					if (!copiedFileCache.contains(physicalDependencyLoc)) {
+						copiedFileCache.add(physicalDependencyLoc)
+						// create member name
+						String memberName = CopyToPDS.createMemberName(physicalDependency.getFile())
+						//retrieve zUnitFileExtension plbck
+						zunitFileExtension = (props.zunit_playbackFileExtension) ? props.zunit_playbackFileExtension : null
 
-					if( zunitFileExtension && !zunitFileExtension.isEmpty() && ((physicalDependency.getFile().substring(physicalDependency.getFile().indexOf("."))).contains(zunitFileExtension))){
-						new CopyToPDS().file(new File(physicalDependencyLoc))
-								.copyMode(CopyMode.BINARY)
-								.dataset(dependencyPDS)
-								.member(CopyToPDS.createMemberName(physicalDependency.getFile()))
-								.execute()
-					} else
-					{
-						new CopyToPDS().file(new File(physicalDependencyLoc))
-								.dataset(dependencyPDS)
-								.member(CopyToPDS.createMemberName(physicalDependency.getFile()))
-								.execute()
+						if( zunitFileExtension && !zunitFileExtension.isEmpty() && ((physicalDependency.getFile().substring(physicalDependency.getFile().indexOf("."))).contains(zunitFileExtension))){
+							new CopyToPDS().file(new File(physicalDependencyLoc))
+									.copyMode(CopyMode.BINARY)
+									.dataset(dependencyPDS)
+									.member(memberName)
+									.execute()
+						} else
+						{
+							new CopyToPDS().file(new File(physicalDependencyLoc))
+									.dataset(dependencyPDS)
+									.member(memberName)
+									.execute()
+						}
 					}
+				} else {
+					String errorMsg = "*! Target dataset mapping for dependency ${physicalDependency.getFile()} could not be found in either in dependenciesAlternativeLibraryNameMapping (COBOL and PLI) or PropertyMapping $dependencyDatasetMapping"
+					println(errorMsg)
+					props.error = "true"
+					updateBuildResult(errorMsg:errorMsg)
 				}
 			}
 		}
@@ -161,7 +283,7 @@ def sortBuildList(List<String> buildList, String rankPropertyName) {
 def updateBuildResult(Map args) {
 	// args : errorMsg / warningMsg, logs[logName:logFile], client:repoClient
 
-	// update build results only in non-userbuild scenarios 
+	// update build results only in non-userbuild scenarios
 	if (args.client && !props.userBuild) {
 		def buildResult = args.client.getBuildResult(props.applicationBuildGroup, props.applicationBuildLabel)
 		if (!buildResult) {
@@ -203,12 +325,14 @@ def updateBuildResult(Map args) {
 def createDependencyResolver(String buildFile, String rules) {
 	if (props.verbose) println "*** Creating dependency resolver for $buildFile with $rules rules"
 
-	def scanner = getScanner(buildFile)
-
 	// create a dependency resolver for the build file
 	DependencyResolver resolver = new DependencyResolver().file(buildFile)
 			.sourceDir(props.workspace)
-			.scanner(scanner)
+	
+	// add scanner if userBuild Dep File not provided, or not a user build
+	if (!props.userBuildDependencyFile || !props.userBuild)
+		resolver.setScanner(getScanner(buildFile))
+
 	// add resolution rules
 	if (rules)
 		resolver.setResolutionRules(parseResolutionRules(rules))
@@ -349,13 +473,15 @@ def getScanner(String buildFile){
 def createLanguageDatasets(String lang) {
 	if (props."${lang}_srcDatasets")
 		createDatasets(props."${lang}_srcDatasets".split(','), props."${lang}_srcOptions")
-		
+
 	if (props."${lang}_loadDatasets")
 		createDatasets(props."${lang}_loadDatasets".split(','), props."${lang}_loadOptions")
-	
+
 	if (props."${lang}_reportDatasets")
 		createDatasets(props."${lang}_reportDatasets".split(','), props."${lang}_reportOptions")
-	
+
+	if (props."${lang}_cexecDatasets")
+		createDatasets(props."${lang}_cexecDatasets".split(','), props."${lang}_cexecOptions")
 }
 
 /*
@@ -389,10 +515,296 @@ def getLangPrefix(String scriptName){
 		case "Assembler.groovy":
 			langPrefix = 'assembler'
 			break;
+		case "BMS.groovy":
+			langPrefix = 'bms'
+			break;
+		case "DBDgen.groovy":
+			langPrefix = 'dbdgen'
+			break;
+		case "MFS.groovy":
+			langPrefix = 'mfs'
+			break;
+		case "PSBgen.groovy":
+			langPrefix = 'psbgen'
+			break;
 		default:
-			if (props.verbose) println ("*** No language prefix defined for $scriptName.")
+			if (props.verbose) println ("*** ! No language prefix defined for $scriptName.")
 			break;
 	}
 	return langPrefix
+}
+
+/*
+ * retrieveLastBuildResult(RepositoryClient)
+ * returns last successful build result
+ *
+ */
+def retrieveLastBuildResult(RepositoryClient repositoryClient){
+
+	// get the last build result
+	def lastBuildResult = repositoryClient.getLastBuildResult(props.applicationBuildGroup, BuildResult.COMPLETE, BuildResult.CLEAN)
+
+	if (lastBuildResult == null && props.topicBranchBuild){
+		// if this is the first topic branch build get the main branch build result
+		if (props.verbose) println "** No previous successful topic branch build result. Retrieving last successful main branch build result."
+		String mainBranchBuildGroup = "${props.application}-${props.mainBuildBranch}"
+		lastBuildResult = repositoryClient.getLastBuildResult(mainBranchBuildGroup, BuildResult.COMPLETE, BuildResult.CLEAN)
+	}
+
+	if (lastBuildResult == null) {
+		println "*! No previous topic branch build result or main branch build result exists. Cannot calculate file changes."
+	}
+
+	return lastBuildResult
+}
+
+/*
+ * returns the deployType for a logicalFile depending on the isCICS, isDLI setting
+ */
+def getDeployType(String langQualifier, String buildFile, LogicalFile logicalFile){
+	// getDefault
+	String deployType = props.getFileProperty("${langQualifier}_deployType", buildFile)
+	if(deployType == null )
+		deployType = 'LOAD'
+
+	if (props."${langQualifier}_deployType" == deployType){ // check if a file level overwrite was used
+		if (logicalFile != null){
+			if(isCICS(logicalFile)){ // if CICS
+				String cicsDeployType = props.getFileProperty("${langQualifier}_deployTypeCICS", buildFile)
+				if (cicsDeployType != null) deployType = cicsDeployType
+			} else if (isDLI(logicalFile)){
+				String dliDeployType = props.getFileProperty("${langQualifier}_deployTypeDLI", buildFile)
+				if (dliDeployType != null) deployType = dliDeployType
+			}
+		}
+	} else{
+		// a file level overwrite was used
+	}
+	return deployType
+}
+
+/*
+ * Creates a Generic PropertyRecord with the provided db2 information in bind.properties
+ */
+def generateDb2InfoRecord(String buildFile){
+	
+	// New Generic Property Record
+	PropertiesRecord db2BindInfo = new PropertiesRecord("db2BindInfo:${buildFile}")
+	
+	// Link to buildFile
+	db2BindInfo.addProperty("file", buildFile)
+
+	// Iterate over list of Db2InfoRecord properties
+	if (props.generateDb2BindInfoRecordProperties) {
+		String[] generateDb2InfoRecordPropertiesList = props.getFileProperty("generateDb2BindInfoRecordProperties", buildFile).split(',')
+		generateDb2InfoRecordPropertiesList.each { db2Prop ->
+			// Add all properties, which are defined for bind - see application-conf/bind.properties
+			String bindPropertyValue = props.getFileProperty("${db2Prop}", buildFile)
+			if (bindPropertyValue != null ) db2BindInfo.addProperty("${db2Prop}",bindPropertyValue)
+		}
+	}
+		
+	return db2BindInfo		
+}
+
+/*
+ * Parses and validates the user build dependency file 
+ * returns a parsed json object 
+ */
+def validateDependencyFile(String buildFile, String depFilePath) {
+	String[] allowedEncodings = ["UTF-8", "IBM-1047"]
+	String[] reqDepFileProps = ["fileName", "isCICS", "isSQL", "isDLI", "isMQ", "dependencies", "schemaVersion"]
+	
+	// Load dependency file and verify existance
+	File depFile = new File(getAbsolutePath(depFilePath))
+	assert depFile.exists() : "*! Dependency file not found: ${depFile.getAbsolutePath()}"
+	
+	// Parse the JSON file
+	String encoding = retrieveHFSFileEncoding(depFile) // Determine the encoding from filetag
+	JsonSlurper slurper = new JsonSlurper().setType(JsonParserType.INDEX_OVERLAY) // Use INDEX_OVERLAY, fastest parser
+	def depFileData
+	if (encoding) {
+		if (props.verbose) println "Parsing dependency file as ${encoding}: "
+		assert allowedEncodings.contains(encoding) : "*! Dependency file must be encoded and tagged as either UTF-8 or IBM-1047 but was ${encoding}"
+		depFileData = slurper.parse(depFile, encoding) // Parse dependency file with encoding
+	}
+	else {
+		if (props.verbose) println "[WARNING] Dependency file is untagged. \nParsing dependency file with default system encoding: "
+		depFileData = slurper.parse(depFile) // Assume default encoding for system
+	}
+	if (props.verbose) println new JsonBuilder(depFileData).toPrettyString() // Pretty print if verbose
+	
+	// Validate JSON structure
+	reqDepFileProps.each { depFileProp ->
+		assert depFileData."${depFileProp}" != null : "*! Missing required dependency file field '$depFileProp'"
+	}
+	// Validate depFileData.fileName == buildFile
+	assert getAbsolutePath(depFileData.fileName) == getAbsolutePath(buildFile) : "*! Dependency file mismatch: fileName does not match build file"
+	return depFileData // return the parsed JSON object
+}
+
+/*
+ * Validates the current Dbb Toolkit version
+ * exits the process, if it does not meet the minimum required version of zAppBuild.
+ * 
+ */
+def assertDbbBuildToolkitVersion(String currentVersion, String requiredVersion){
+
+	try {
+		// Tokenize current version
+		List currentVersionList = currentVersion.tokenize(".")
+		List requiredVersionList = requiredVersion.tokenize(".")
+
+		// validate the version formats, current version is allowed have more labels.
+		assert currentVersionList.size() >= requiredVersionList.size() : "Version syntax does not match."
+
+		// validate each label
+		Boolean foundValidVersion = false
+		currentVersionList.eachWithIndex{ label, i ->
+			if((requiredVersionList.size() >= i +1 ) && !(foundValidVersion.toBoolean() == true)) {
+				assert (label as int) >= ((requiredVersionList[i]) as int) : "Current DBB Toolkit Version $currentVersion does not meet the minimum required version $requiredVersion. EXIT."
+				if (label > requiredVersionList[i]) foundValidVersion = true
+			}
+		
+	}
+
+	} catch(AssertionError e) {
+		println "Current DBB Toolkit Version $currentVersion does not meet the minimum required version $requiredVersion. EXIT."
+		println e.getMessage()
+		System.exit(1)
+	}
+}
+
+/*
+ * Returns a string representation of a file's encoding calculated from its tag.
+ * 
+ */
+def retrieveHFSFileEncoding(File file) {
+	FileAttribute.Stat stat = FileAttribute.getStat(file.getAbsolutePath())
+    FileAttribute.Tag tag = stat.getTag()
+	int i = 0
+	if (tag != null)
+	{
+  		char x = tag.getCodeCharacterSetID()
+  		i = (int) x
+	}
+
+	switch(i) {
+		case 0: return null // Return null if file is untagged
+		case 1208: return "UTF-8"
+		default: return "IBM-${i}"
+	}
+	
+}
+
+/*
+ * Logs the resolution rules of the DependencyResolver in a table format
+ * 
+ */
+def printResolutionRules(List<ResolutionRule> rules) {
+
+	println("*** Configured resulution rules:")
+	
+	// Print header of table
+	println("    " + "Library".padRight(10) + "Category".padRight(12) + "SourceDir/File".padRight(50) + "Directory".padRight(36) + "Collection".padRight(24) + "Archive".padRight(20))
+	println("    " + " ".padLeft(10,"-") + " ".padLeft(12,"-") + " ".padLeft(50,"-") + " ".padLeft(36,"-") + " ".padLeft(24,"-") + " ".padLeft(20,"-"))
+
+	// iterate over rules configured for the dependencyResolver
+	rules.each{ rule ->
+		searchPaths = rule.getSearchPath()
+		searchPaths.each { DependencyPath searchPath ->
+			def libraryName = (rule.getLibrary() != null) ? rule.getLibrary().padRight(10) : "N/A".padRight(10)
+			def categoryName = (rule.getCategory() != null) ? rule.getCategory().padRight(12) : "N/A".padRight(12)
+			def srcDir = (searchPath.getSourceDir() != null) ? searchPath.getSourceDir().padRight(50) : "N/A".padRight(50)
+			def directory = (searchPath.getDirectory() != null) ? searchPath.getDirectory().padRight(36) : "N/A".padRight(36)
+			def collection = (searchPath.getCollection() != null) ? searchPath.getCollection().padRight(24) : "N/A".padRight(24)
+			def archiveFile = (searchPath.getArchive() != null) ? searchPath.getArchive().padRight(20) : "N/A".padRight(20)
+			println("    " + libraryName + categoryName + srcDir + directory + collection + archiveFile)
+
+		}
+	}
+}
+
+/*
+ * Logs information about the physical dependencies in a table format
+ */
+def printPhysicalDependencies(List<PhysicalDependency> physicalDependencies) {
+	// Print header of table
+	println("    " + "Library".padRight(10) + "Category".padRight(16) + "Name".padRight(10) + "Status".padRight(14) + "SourceDir/File".padRight(36))
+	println("    " + " ".padLeft(10,"-") + " ".padLeft(16,"-") + " ".padLeft(10,"-") + " ".padLeft(14,"-") + " ".padLeft(36,"-"))
+
+	// iterate over list and display info about the physical dependency
+	physicalDependencies.each { physicalDependency ->
+		def resolvedStatus = (physicalDependency.isResolved()) ? 'RESOLVED' : 'NOT RESOLVED'
+		def resolvedFlag = (physicalDependency.isResolved()) ? ' ' : '*'
+		def depFile = (physicalDependency.getFile()) ? physicalDependency.getFile() : "N/A"
+		println(resolvedFlag.padLeft(4) + physicalDependency.getLibrary().padRight(10) + physicalDependency.getCategory().padRight(16) + physicalDependency.getLname().padRight(10) + resolvedStatus.padRight(14) + depFile.padRight(36))
+	}
+}
+
+/*
+ *  This is a helper method which parses a JSON String representing a map of key value pairs to a proper map
+ *  e.q. cobol_dependenciesAlternativeLibraryNameMapping = {"MYFILE": "cobol_myfilePDS", "DCLGEN" : "cobol_dclgenPDS"}
+ */
+
+def parseJSONStringToMap(String buildProperty) {
+	Map map = [:]
+	try {
+		JsonSlurper slurper = new groovy.json.JsonSlurper()
+		map = slurper.parseText(buildProperty)
+	} catch (Exception e) {
+		String errorMsg = "*! BuildUtils.parseJSONStringToMap - Failed to parse build property $buildProperty from JSON String into a map object. Marking build as in error."
+		println(errorMsg)
+		props.error = "true"
+		updateBuildResult(errorMsg:errorMsg)
+	}
+	return map
+}
+
+/*
+ * Obtain the abbreviated git hash from the PropertyMappings table
+ *  returns null if no hash was found
+ */
+def getShortGitHash(String buildFile) {
+	def abbrevGitHash
+	PropertyMappings githashChangedFilesMap = new PropertyMappings("githashBuildableFilesMap")
+	abbrevGitHash = githashChangedFilesMap.getValue(buildFile)
+	if (abbrevGitHash != null ) return abbrevGitHash
+	if (props.verbose) println "*! Could not obtain abbreviated githash for buildFile $buildFile"
+	return null
+}
+
+/*
+ * Loading file level properties for all files on the buildList or list which is passed to this method.
+ */
+def loadFileLevelPropertiesFromFile(List<String> buildList) {
+
+	buildList.each { String buildFile ->
+
+		// check for file level overwrite
+		loadFileLevelProperties = props.getFileProperty('loadFileLevelProperties', buildFile)
+		if (loadFileLevelProperties && loadFileLevelProperties.toBoolean()) {
+
+			String member = new File(buildFile).getName()
+			String propertyFilePath = props.getFileProperty('propertyFilePath', buildFile)
+			String propertyExtention = props.getFileProperty('propertyFileExtension', buildFile)
+			String propertyFile = getAbsolutePath(props.application) + "/${propertyFilePath}/${member}.${propertyExtention}"
+			File fileLevelPropFile = new File(propertyFile)
+
+			if (fileLevelPropFile.exists()) {
+				if (props.verbose) println "* Populating property file $propertyFile for $buildFile"
+				InputStream propertyFileIS = new FileInputStream(propertyFile)
+				Properties fileLevelProps = new Properties()
+				fileLevelProps.load(propertyFileIS)
+
+				fileLevelProps.entrySet().each { entry ->
+					if (props.verbose) println "* Adding file level pattern $entry.key = $entry.value for $buildFile"
+					props.addFilePattern(entry.key, entry.value, buildFile)
+				}
+			} else {
+				if (props.verbose) println "* No property file found for $buildFile. Build will take the defaults or already defined file properties."
+			}
+		}
+	}
 }
 

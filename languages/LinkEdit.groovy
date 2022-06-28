@@ -27,13 +27,20 @@ sortedList.each { buildFile ->
 	println "*** Building file $buildFile"
 
 	// copy build file to input data set
-	buildUtils.copySourceFiles(buildFile, props.linkedit_srcPDS, null, null)
+	buildUtils.copySourceFiles(buildFile, props.linkedit_srcPDS, null, null, null)
 
 	// create mvs commands
-	String rules = props.getFileProperty('linkedit_resolutionRules', buildFile)
-	DependencyResolver dependencyResolver = buildUtils.createDependencyResolver(buildFile, rules)
-	LogicalFile logicalFile = dependencyResolver.getLogicalFile()
+	LogicalFile logicalFile
+	if (props.useSearchConfiguration && props.useSearchConfiguration.toBoolean()) { // use new SearchPathDependencyResolver
+		logicalFile = SearchPathDependencyResolver.getLogicalFile(buildFile,props.workspace)
+	}
+	else { // use deprecated DependencyResolver API
+		DependencyResolver dependencyResolver = buildUtils.createDependencyResolver(buildFile, null)
+		logicalFile = dependencyResolver.getLogicalFile()
+	}
+	
 	String member = CopyToPDS.createMemberName(buildFile)
+	
 	File logFile = new File( props.userBuild ? "${props.buildOutDir}/${member}.log" : "${props.buildOutDir}/${member}.linkedit.log")
 	if (logFile.exists())
 		logFile.delete()
@@ -78,15 +85,20 @@ def createLinkEditCommand(String buildFile, LogicalFile logicalFile, String memb
 	String parms = props.getFileProperty('linkEdit_parms', buildFile)
 	String linker = props.getFileProperty('linkedit_linkEditor', buildFile)
 
+	// obtain githash for buildfile
+	String linkedit_storeSSI = props.getFileProperty('linkedit_storeSSI', buildFile) 
+	if (linkedit_storeSSI && linkedit_storeSSI.toBoolean() && (props.mergeBuild || props.impactBuild || props.fullBuild)) {
+		String ssi = buildUtils.getShortGitHash(buildFile)
+		if (ssi != null) parms = parms + ",SSI=$ssi"
+	}
 	// define the MVSExec command to link edit the program
 	MVSExec linkedit = new MVSExec().file(buildFile).pgm(linker).parm(parms)
 
 	// add DD statements to the linkedit command
-	String linkedit_deployType = props.getFileProperty('linkedit_deployType', buildFile)
-	if ( linkedit_deployType == null )
-		linkedit_deployType = 'LOAD'
+	// deployType requires a file level overwrite to define isCICS and isDLI, while the linkcard does not carry isCICS, isDLI attributes
+	String deployType = buildUtils.getDeployType("linkedit", buildFile, logicalFile)
 	linkedit.dd(new DDStatement().name("SYSLIN").dsn("${props.linkedit_srcPDS}($member)").options("shr").report(true))
-	linkedit.dd(new DDStatement().name("SYSLMOD").dsn("${props.linkedit_loadPDS}($member)").options('shr').output(true).deployType(linkedit_deployType))
+	linkedit.dd(new DDStatement().name("SYSLMOD").dsn("${props.linkedit_loadPDS}($member)").options('shr').output(true).deployType(deployType))
 	linkedit.dd(new DDStatement().name("SYSPRINT").options(props.linkedit_tempOptions))
 	linkedit.dd(new DDStatement().name("SYSUT1").options(props.linkedit_tempOptions))
 

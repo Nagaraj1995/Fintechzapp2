@@ -27,7 +27,7 @@ sortedList.each { buildFile ->
 	println "*** Building file $buildFile"
 	
 	// copy build file to input data set
-	buildUtils.copySourceFiles(buildFile, props.bms_srcPDS, null, null)
+	buildUtils.copySourceFiles(buildFile, props.bms_srcPDS, null, null, null)
 	
 	// create mvs commands
 	String member = CopyToPDS.createMemberName(buildFile)
@@ -74,6 +74,7 @@ def createCopyGenCommand(String buildFile, String member, File logFile) {
 	// add DD statements to the compile command
 	compile.dd(new DDStatement().name("SYSIN").dsn("${props.bms_srcPDS}($member)").options('shr').report(true))
 	compile.dd(new DDStatement().name("SYSPRINT").options(props.bms_tempOptions))
+	String deployType = buildUtils.getDeployType("bms_copy", buildFile, null)
 	compile.dd(new DDStatement().name("SYSPUNCH").dsn("${props.bms_cpyPDS}($member)").options('shr').output(true))
 	[1,2,3].each { num ->
 		compile.dd(new DDStatement().name("SYSUT$num").options(props.bms_tempOptions))
@@ -120,12 +121,20 @@ def createCompileCommand(String buildFile, String member, File logFile) {
 def createLinkEditCommand(String buildFile, String member, File logFile) {
 	String parameters = props.getFileProperty('bms_linkEditParms', buildFile)
 	
+	// obtain githash for buildfile
+	String bms_storeSSI = props.getFileProperty('bms_storeSSI', buildFile)
+	if (bms_storeSSI && bms_storeSSI.toBoolean() && (props.mergeBuild || props.impactBuild || props.fullBuild)) {
+		String ssi = buildUtils.getShortGitHash(buildFile)
+		if (ssi != null) parameters = parameters + ",SSI=$ssi"
+	}
+	
 	// define the MVSExec command to link edit the program
 	MVSExec linkedit = new MVSExec().file(buildFile).pgm(props.bms_linkEditor).parm(parameters)
 	
 	// add DD statements to the linkedit command
+	String deployType = buildUtils.getDeployType("bms", buildFile, null)
 	linkedit.dd(new DDStatement().name("SYSLIN").dsn("&&TEMPOBJ").options("shr"))
-	linkedit.dd(new DDStatement().name("SYSLMOD").dsn("${props.bms_loadPDS}($member)").options('shr').output(true).deployType('MAPLOAD'))
+	linkedit.dd(new DDStatement().name("SYSLMOD").dsn("${props.bms_loadPDS}($member)").options('shr').output(true).deployType(deployType))
 	linkedit.dd(new DDStatement().name("SYSPRINT").options(props.bms_tempOptions))
 	linkedit.dd(new DDStatement().name("SYSUT1").options(props.bms_tempOptions))
 	
