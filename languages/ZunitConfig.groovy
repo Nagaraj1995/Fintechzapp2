@@ -31,7 +31,11 @@ buildUtils.createLanguageDatasets(langQualifier)
 // iterate through build list
 (argMap.buildList).each { buildFile ->
 	println "*** Building file $buildFile"
-
+}
+(argMap.buildList).each { buildFile ->
+	println "*** Building file $buildFile"
+    println("####playback########")
+	println(argMap.buildList)
 	String member = CopyToPDS.createMemberName(buildFile)
 
 	File logFile = new File("${props.buildOutDir}/${member}.zunit.jcl.log")
