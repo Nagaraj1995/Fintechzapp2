@@ -1,5 +1,5 @@
 # Application Configuration
-This folder contains application specific configuration properties used by the zAppBuild Groovy build and utility scripts. It is intended to be copied as a high level folder in the application repository or main application repository if the application source files are distributed across multiple repositories. Once copied to the application repository, users should review the default property files and modify any values as needed. 
+This folder contains application specific configuration properties used by the zAppBuild Groovy build and utility scripts. It is intended to be copied as a high level folder in the application repository or main application repository if the application source files are distributed across multiple repositories. Once copied to the application repository, users should review the default property files and modify any values as needed.
 
 At the beginning of the build, the `application-conf/application.properties` file will automatically be loaded into the [DBB BuildProperties class](https://www.ibm.com/support/knowledgecenter/SS6T76_1.0.4/scriptorg.html#build-properties-class). Use the `applicationPropFiles` property (see table below) to load additional application property files.
 
@@ -22,10 +22,10 @@ jobCard | JOBCARD for JCL execs
 impactResolutionRules | Comma separated list of resolution rule properties used for impact builds.  Sample resolution rule properties (in JSON format) are included below.
 
 ### file.properties
-Location of file properties, script mappings and file level property overrides.  All file properties for the entire application, including source files in distributed repositories of the application need to be contained either in this file or in other property files in the `application-conf` directory. Look for column 'Overridable' in the tables below for build properties that can have file level property overrides. 
+Location of file properties, script mappings and file level property overrides.  All file properties for the entire application, including source files in distributed repositories of the application need to be contained either in this file or in other property files in the `application-conf` directory. Look for column 'Overridable' in the tables below for build properties that can have file level property overrides.
 
-Property | Description 
---- | --- 
+Property | Description
+--- | ---
 dbb.scriptMapping | DBB configuration file properties association build files to language scripts
 dbb.scannerMapping | DBB scanner mapping to overwrite the file scanner. File property
 cobol_testcase | File property to indicate a generated zUnit cobol test case to use a different set of source and output libraries
