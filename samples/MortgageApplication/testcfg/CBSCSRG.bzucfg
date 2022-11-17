@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<runner:RunnerConfiguration xmlns:runner="http://www.ibm.com/zUnit/3.0.0.0/TestRunner" id="ea3f6e72-d8ca-435c-9d54-0007c9033855">
+<runner:RunnerConfiguration xmlns:runner="http://www.ibm.com/zUnit/3.0.0.0/TestRunner" id="55590448-7733-42fe-ad26-f4c1e8a9b682">
   <runner:options contOnTestCaseError="false" contOnTestCaseFail="true" contOnTestError="false" contOnTestFail="true"/>
   <runner:testCase moduleName="TCBSCSRG">
     <test name="dummy" entry="dummy" type="CICS" init="dummy" term="dummy" program="CBSCSRG" commarea="177" skipTest="true" resetFile="true" stubCall="true" dummy="true"/>
