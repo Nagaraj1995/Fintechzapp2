@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<runner:RunnerConfiguration xmlns:runner="http://www.ibm.com/zUnit/3.0.0.0/TestRunner" id="22f45416-6acb-48cd-96e7-22b2dd1cbc53">
+<runner:RunnerConfiguration xmlns:runner="http://www.ibm.com/zUnit/3.0.0.0/TestRunner" id="687f8714-7459-4a5c-8c71-1fe75253b7e0">
   <runner:options contOnTestCaseError="false" contOnTestCaseFail="true" contOnTestError="false" contOnTestFail="true"/>
   <runner:testCase moduleName="TCBSRGDB">
     <test name="TEST2" entry="TEST_TEST2" type="CICS" init="BZU_INIT" term="BZU_TERM" program="CBSRGDBB" commarea="0" skipTest="false" resetFile="true" stubCall="true" dummy="false"/>
     <test name="TEST3" entry="TEST_TEST3" type="CICS" init="BZU_INIT" term="BZU_TERM" program="CBSRGDBB" commarea="0" skipTest="false" resetFile="false" stubCall="true" dummy="false"/>
     <test name="TEST4" entry="TEST_TEST4" type="CICS" init="BZU_INIT" term="BZU_TERM" program="CBSRGDBB" commarea="0" skipTest="false" resetFile="false" stubCall="true" dummy="false"/>
+    <test name="TEST5" entry="TEST_TEST5" type="CICS" init="BZU_INIT" term="BZU_TERM" program="CBSRGDBB" commarea="0" skipTest="false" resetFile="false" stubCall="true" dummy="false"/>
   </runner:testCase>
   <runner:playback moduleName="CBSRGDBB">
     <playbackFile name="&lt;HLQ>.ZUNIT.PB.CBSRGDBB" localName="CBSRGDBB.plbck"/>
